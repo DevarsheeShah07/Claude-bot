@@ -1,4 +1,3 @@
-# pylint: disable=too-many-arguments,too-many-locals,too-many-statements,unused-argument,too-many-lines,import-error
 
 """
 Employer Engagement Omm Stack - Generic Components
