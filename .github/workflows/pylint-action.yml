@@ -17,7 +17,7 @@ name: PyLintAction
 
 on:
   pull_request:
-    branches: [master, dev, stage-qa]
+    branches: [main, dev, stage-qa]
   # This section allows the action to be kicked off manually
   # from gh cli or github console or other means
   # PR number (numeric) must be supplied
