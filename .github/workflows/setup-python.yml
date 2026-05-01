@@ -1,0 +1,57 @@
+# Who : Ryan Strandt
+# When: 01-09-2022
+#
+# Reusable Workflows: https://docs.github.com/en/actions/using-workflows/reusing-workflows#overview
+#
+# This Workflow installs the required python dependencies that are utilized within other github actions. The python packages are cached for usage in other jobs and workflows.
+# The .github/requirements.txt file is used to update packages and generate the cache key.
+#
+# Usage:
+#   This workflow is a reusable workflow and can be invoked as a job in another workflow:
+############ Example: #############
+#
+#     jobs:
+#       ...
+#       SetupPython:
+#         uses: ./.github/workflows/setup-python.yml
+#
+############
+# You can adjust the behavior by modifying this file.
+
+name: 'SetupPython'
+
+on:
+  workflow_call:
+
+jobs:
+  SetupPython:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout your GitHub Repo with application code in
+      - name: Checkout Current Repo
+        uses: actions/checkout@v3
+
+      # Setup python and pre-requisite libs
+      - name: setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.10.11
+          cache: 'pip'
+
+      - uses: actions/cache@v3
+        id: pip
+        with:
+          path: ${{ env.pythonLocation }}
+          key: ${{ env.pythonLocation }}-pip-${{ hashFiles('.github/requirements.txt') }}
+
+      - name: install dependencies
+        if: steps.pip.outputs.cache-hit != 'true'
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r ${GITHUB_WORKSPACE}/.github/requirements.txt
+
+      - uses: actions/cache@v3
+        if: steps.pip.outputs.cache-hit != 'true'
+        with:
+          path: ${{ env.pythonLocation }}
+          key: ${{ env.pythonLocation }}-pip-${{ hashFiles('.github/requirements.txt') }}

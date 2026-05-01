@@ -1,0 +1,86 @@
+# Who :   Arpan Malviya
+# When:   09-Feb-2023
+# Why:    Enable linting in code repo against dev/qa/master
+# What:   This actions script will run pylint against all python code
+#         included in a PR and assign it a score. If the score is < 10
+#         the check will fail
+# Usage:  This action will automatically be invoked when a PR is
+#         opened against the marked base branches. It can also be
+#         invoked locally from your machine if you have github actions
+#         cli installed using the following syntax:
+#           gh workflow run PyLintAction --ref=<your branch name> -f pr=<numeric PR#>
+#         If the pylint module is installed on your local machine and you
+#         just want to validate individual code files  you can just run
+#           pylint --rcfile=.github\config\pylint.rc <your code file>
+#         to validate your code
+name: PyLintAction
+
+on:
+  pull_request:
+    branches: [master, dev, stage-qa]
+  # This section allows the action to be kicked off manually
+  # from gh cli or github console or other means
+  # PR number (numeric) must be supplied
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: 'PR to validate'
+
+jobs:
+  pylint-action:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout your GitHub Repo with Application code in
+      - name: Checkout Current Repo
+        uses: actions/checkout@v3
+
+      # Setup Python and pre-requisite libs
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.10.11
+          cache: 'pip'
+
+      - uses: actions/cache@v3
+        id: pip
+        with:
+          path: ${{ env.pythonLocation }}
+          key: ${{ env.pythonLocation }}-pip-${{ hashFiles('.github/requirements.txt') }}
+
+      - name: Install dependencies
+        if: steps.pip.outputs.cache-hit != 'true'
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r ${GITHUB_WORKSPACE}/.github/requirements.txt
+
+      # Determine PR to validate from environment
+      # Explanation:
+      #   when triggered via cli/console, the pr parameter
+      #   will store the PR# and will be used as-is in the next
+      #   step. However, when the action is called by the pull_request
+      #   trigger (i.e. automatically on PR creation against dev/qa/master)
+      #   , then the PR # will be parsed from the built-in github variable
+      #     github.event.number
+      - name: Determine PR
+        env:
+          input_pr: ${{ github.event.inputs.pr }}
+        run: |
+          if [[ "$input_pr" == "" ]]; then
+            echo "pr_number=${{ github.event.number }}" >> "$GITHUB_ENV"
+          else
+            echo "pr_number=$input_pr" >> "$GITHUB_ENV"
+          fi
+
+      # Lint code
+      # Here is what is happening in this section
+      # gh cli is authenticated using builtin token
+      # gh cli is used to view files in the PR
+      # jq query is used to parse out only python files (.py)
+      # files are processed in a loop through pylint using the rc file
+      #   .github/config/.pylintrc
+      - name: Analysing the code with pylint
+        env:
+          pr_number: ${{ env.pr_number }}
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | gh auth login --with-token
+          for py_file in $(gh api repos/${GITHUB_REPOSITORY}/pulls/$pr_number/files -q ".[] | select(.status!=\"removed\") | select (.filename | test(\".py$\")) | .filename"); do pylint --rcfile=${GITHUB_WORKSPACE}/.github/config/.pylintrc $py_file; done;
