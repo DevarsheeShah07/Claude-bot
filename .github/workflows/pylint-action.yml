@@ -1,6 +1,6 @@
-# Who :   Arpan Malviya
-# When:   09-Feb-2023
-# Why:    Enable linting in code repo against dev/qa/master
+# Who :   Devarshee Shah
+# When:   01-05-2026
+# Why:    Enable linting in code repo against dev/qa/main
 # What:   This actions script will run pylint against all python code
 #         included in a PR and assign it a score. If the score is < 10
 #         the check will fail
@@ -27,14 +27,18 @@ on:
         description: 'PR to validate'
 
 jobs:
+  setup:
+    uses: ./.github/workflows/setup-python.yml
+
   pylint-action:
+    needs: setup
     runs-on: ubuntu-latest
     steps:
       # Checkout your GitHub Repo with Application code in
       - name: Checkout Current Repo
         uses: actions/checkout@v3
 
-      # Setup Python and pre-requisite libs
+      # Setup Python on this runner and restore cached packages from setup job
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -42,23 +46,16 @@ jobs:
           cache: 'pip'
 
       - uses: actions/cache@v3
-        id: pip
         with:
           path: ${{ env.pythonLocation }}
           key: ${{ env.pythonLocation }}-pip-${{ hashFiles('.github/requirements.txt') }}
-
-      - name: Install dependencies
-        if: steps.pip.outputs.cache-hit != 'true'
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install -r ${GITHUB_WORKSPACE}/.github/requirements.txt
 
       # Determine PR to validate from environment
       # Explanation:
       #   when triggered via cli/console, the pr parameter
       #   will store the PR# and will be used as-is in the next
       #   step. However, when the action is called by the pull_request
-      #   trigger (i.e. automatically on PR creation against dev/qa/master)
+      #   trigger (i.e. automatically on PR creation against dev/qa/main)
       #   , then the PR # will be parsed from the built-in github variable
       #     github.event.number
       - name: Determine PR

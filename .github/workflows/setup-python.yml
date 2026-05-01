@@ -1,5 +1,5 @@
-# Who : Ryan Strandt
-# When: 01-09-2022
+# Who : Devarshee
+# When: 01-05-2026
 #
 # Reusable Workflows: https://docs.github.com/en/actions/using-workflows/reusing-workflows#overview
 #
@@ -49,9 +49,3 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install -r ${GITHUB_WORKSPACE}/.github/requirements.txt
-
-      - uses: actions/cache@v3
-        if: steps.pip.outputs.cache-hit != 'true'
-        with:
-          path: ${{ env.pythonLocation }}
-          key: ${{ env.pythonLocation }}-pip-${{ hashFiles('.github/requirements.txt') }}
